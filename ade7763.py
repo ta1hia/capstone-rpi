@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import spidev
 import time
-from pins import *
+# from pins import *
 
 # Set up SPI
 spi = spidev.SpiDev()
@@ -22,7 +22,6 @@ GPIO.output(ADE_RST, GPIO.HIGH)
 # GPIO.setup(ADE_INT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 # GPIO.add_event_detect(ADE_INT, GPIO.FALLING, callback=ade_isr, bouncetime=300)
 
-ade_config()
 
 try:
     while True:
