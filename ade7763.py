@@ -9,20 +9,19 @@ spi.open(0, 1)                      # spi.open(bus, device)
 spi.max_speed_hz = 7629             # TODO what speed should this be?
 
 # Set up GPIO pins
-GPIO.setmode(GPIO.BOARD)
+# GPIO.setmode(GPIO.BOARD)
 
 # TODO configure chip select - is this
 # required or handled by spidev?
 
 # configure reset
 GPIO.setup(ADE_RST, GPIO.OUT)
-GPIO.output(ADE_RST, GPIO.HIGH)
+GPIO.output(ADE_RST, 1)
 
 # configure interrupt pin
 # GPIO.setup(ADE_INT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 # GPIO.add_event_detect(ADE_INT, GPIO.FALLING, callback=ade_isr, bouncetime=300)
 
-ade_config()
 
 try:
     while True:
@@ -61,16 +60,16 @@ try:
             print s
         else:
             print "Unknown command\n"
-except KeyboardInterrupt: # Ctrl+C pressed, so…
+except KeyboardInterrupt:
     spi.close()
     GPIO.cleanup()
 
 
 
 def ade_reset():
-    GPIO.output(ADE_RST, GPIO.LOW)
+    GPIO.output(ADE_RST, 0)
     time.sleep(0.100)
-    GPIO.output(ADE_RST, GPIO.HIGH)
+    GPIO.output(ADE_RST, 1)
     time.sleep(0.100)
 
 
@@ -157,7 +156,7 @@ def ade_config():
 
 def ade_read(addr, count):
     # TODO select the chip
-    GPIO.output(ADE_CS, GPIO.LOW)
+    GPIO.output(ADE_CS, 0)
     time.sleep(0.01)
 
     # write address to access
@@ -178,7 +177,7 @@ def ade_read(addr, count):
 
 def ade_write(addr, data, count):
     # TODO select the chip
-    GPIO.output(ADE_CS, GPIO.LOW)
+    GPIO.output(ADE_CS, 0)
     time.sleep(0.01)
 
     # write address to access
