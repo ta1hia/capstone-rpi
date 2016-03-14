@@ -113,7 +113,7 @@ MODE_DISCF    = 0x0004   # Frequency output CF is disabled when this
                                # bit is set.
 MODE_DISSAG   = 0x0008   # Line voltage sag detection is disabled when
                                # this bit is set.
-MODE_ASUSPEND 0x0010   # By setting this bit to Logic 1, both A/D
+MODE_ASUSPEND = 0x0010   # By setting this bit to Logic 1, both A/D
                                # converters can be turned off. During normal
                                # operation, this bit should be left at
                                # Logic 0. All digital functionality can be
@@ -124,7 +124,7 @@ MODE_TEMPSEL   = 0x0020   # Temperature conversion starts when this bit
                                # to 0 after the temperature conversion.
 MODE_SWRST    = 0x0040   # Software Chip Reset. A data transfer should
                                # not take place to the ADE7763 for at least
-                               # 18 �s after a software reset.
+                               # 18 s after a software reset.
 MODE_CYCMODE   = 0x0080   # Setting this bit to Logic 1 places the chip
                                # in line cycle energy accumulation mode.
 MODE_DISCH1   = 0x0100   # ADC 1 (Channel 1) inputs are internally
@@ -158,7 +158,7 @@ MODE_DTRT_3K5   = (0x00 | MODE_DTRT1 | MODE_DTRT0)
 MODE_WAV_POWER    = (0x00)                           # Active power
 MODE_WAV_RESERVED = (0x00 | MODE_WAVSEL0)            # Reserved
 MODE_WAV_ADC1     = (0x00 | MODE_WAVSEL1)            # ADC1 = (i)
-MODE_WAV_ADC2     = (0x00 | MODE_WAVSEL0 | WAVSEL1)  # ADC2 (v)
+MODE_WAV_ADC2     = (0x00 | MODE_WAVSEL0 | MODE_WAVSEL1)  # ADC2 (v)
 
 # Bit definitions for the ISR register */
 IRQ_NONE      = 0x0000

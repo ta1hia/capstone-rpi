@@ -1,70 +1,8 @@
 import RPi.GPIO as GPIO
 import spidev
 import time
-# from pins import *
-
-# Set up SPI
-spi = spidev.SpiDev()
-spi.open(0, 1)                      # spi.open(bus, device)
-spi.max_speed_hz = 7629             # TODO what speed should this be?
-
-# Set up GPIO pins
-# GPIO.setmode(GPIO.BOARD)
-
-# TODO configure chip select - is this
-# required or handled by spidev?
-
-# configure reset
-GPIO.setup(ADE_RST, GPIO.OUT)
-GPIO.output(ADE_RST, 1)
-
-# configure interrupt pin
-# GPIO.setup(ADE_INT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-# GPIO.add_event_detect(ADE_INT, GPIO.FALLING, callback=ade_isr, bouncetime=300)
-
-
-try:
-    while True:
-        opt = input("> ")
-
-        if opt == "r" or opt == "reset_ade":
-            print "Resetting ADE\n"
-            ade_reset()
-        elif opt == "R" or opt == "reset":
-            print "Resetting peak values\n"
-            ade_reset_peaks()
-        elif opt == "i":
-            print "Read Current Channel 1 RMS reg value\n"
-            r = ade_read(MR_IRMS, MR_IRMS_CNT)
-            print "IRMS 0x" + BytesToHex(r) + "\n"
-        elif opt == "v":
-            print "Read Voltage Channel 2 RMS reg value\n"
-            r = ade_read(MR_VRMS, MR_VRMS_CNT)
-            print "VRMS 0x" + BytesToHex(r) + "\n"
-        elif opt == "I":
-            print "Read Current Channel Peak reg value\n"
-            r = ade_read(MR_IPEAK, MR_IPEAK_CNT)
-            print "IPEAK 0x" + BytesToHex(r) + "\n"
-        elif opt == "V":
-            print "Read Voltage Channel Peak reg value\n"
-            r = ade_read(MR_VPEAK, MR_VPEAK_CNT)
-            print "VPEAK 0x" + BytesToHex(r) + "\n"
-        elif opt == "h" or opt == "help":
-            s = ("r\t\t\treset ADE\n"
-                    "R\t\t\tReset peak values\n"
-                    "i\t\t\tPrint current channel 1 RMS reg value\n"
-                    "v\t\t\tPrint voltage channel 2 RMS reg value\n"
-                    "I\t\t\tPrint current peak reg value\n"
-                    "V\t\t\tPrint voltage peak reg value\n"
-                    )
-            print s
-        else:
-            print "Unknown command\n"
-except KeyboardInterrupt:
-    spi.close()
-    GPIO.cleanup()
-
-
+from pins import *
+from ade7763_regs import *
 
 def ade_reset():
     GPIO.output(ADE_RST, 0)
@@ -214,3 +152,65 @@ def ade_isr(channel):
 
 
 
+# Main loop
+
+# Set up SPI
+spi = spidev.SpiDev()
+spi.open(0, 1)                      # spi.open(bus, device)
+spi.max_speed_hz = 7629             # TODO what speed should this be?
+
+# Set up GPIO pins
+# GPIO.setmode(GPIO.BOARD)
+
+# TODO configure chip select - is this
+# required or handled by spidev?
+
+# configure reset
+GPIO.setup(ADE_RST, GPIO.OUT)
+GPIO.output(ADE_RST, 1)
+
+# configure interrupt pin
+# GPIO.setup(ADE_INT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# GPIO.add_event_detect(ADE_INT, GPIO.FALLING, callback=ade_isr, bouncetime=300)
+
+
+try:
+    while True:
+        opt = raw_input("> ")
+
+        if opt == "r" or opt == "reset_ade":
+            print "Resetting ADE\n"
+            ade_reset()
+        elif opt == "R" or opt == "reset":
+            print "Resetting peak values\n"
+            ade_reset_peaks()
+        elif opt == "i":
+            print "Read Current Channel 1 RMS reg value\n"
+            r = ade_read(MR_IRMS, MR_IRMS_CNT)
+            print "IRMS 0x" + BytesToHex(r) + "\n"
+        elif opt == "v":
+            print "Read Voltage Channel 2 RMS reg value\n"
+            r = ade_read(MR_VRMS, MR_VRMS_CNT)
+            print "VRMS 0x" + BytesToHex(r) + "\n"
+        elif opt == "I":
+            print "Read Current Channel Peak reg value\n"
+            r = ade_read(MR_IPEAK, MR_IPEAK_CNT)
+            print "IPEAK 0x" + BytesToHex(r) + "\n"
+        elif opt == "V":
+            print "Read Voltage Channel Peak reg value\n"
+            r = ade_read(MR_VPEAK, MR_VPEAK_CNT)
+            print "VPEAK 0x" + BytesToHex(r) + "\n"
+        elif opt == "h" or opt == "help":
+            s = ("r\t\t\treset ADE\n"
+                    "R\t\t\tReset peak values\n"
+                    "i\t\t\tPrint current channel 1 RMS reg value\n"
+                    "v\t\t\tPrint voltage channel 2 RMS reg value\n"
+                    "I\t\t\tPrint current peak reg value\n"
+                    "V\t\t\tPrint voltage peak reg value\n"
+                    )
+            print s
+        else:
+            print "Unknown command\n"
+except KeyboardInterrupt:
+    spi.close()
+    GPIO.cleanup()
