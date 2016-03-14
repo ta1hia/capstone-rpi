@@ -1,8 +1,7 @@
-import wiringpi2 as wiringpi
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import spidev
 import time
-# from pins import *
+from pins import *
 
 # Set up SPI
 spi = spidev.SpiDev()
@@ -10,18 +9,20 @@ spi.open(0, 1)                      # spi.open(bus, device)
 spi.max_speed_hz = 7629             # TODO what speed should this be?
 
 # Set up GPIO pins
-wiringpi.wiringPiSetup()
+GPIO.setmode(GPIO.BOARD)
 
-# configure chip select
-# TODO do I need to do this or
-# does xfer take care of it?
-wiringpi.pinMode(ADE_CS, OUTPUT)
-wiringpi.digitalWrite(ADE_CS, HIGH)
-time.sleep(0.01)
+# TODO configure chip select - is this
+# required or handled by spidev?
 
 # configure reset
-wiringpi.pinMode(ADE_RST, OUTPUT)
-wiringpi.digitalWrite(ADE_RST, HIGH)
+GPIO.setup(ADE_RST, GPIO.OUT)
+GPIO.output(ADE_RST, GPIO.HIGH)
+
+# configure interrupt pin
+# GPIO.setup(ADE_INT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# GPIO.add_event_detect(ADE_INT, GPIO.FALLING, callback=ade_isr, bouncetime=300)
+
+ade_config()
 
 try:
     while True:
@@ -62,14 +63,14 @@ try:
             print "Unknown command\n"
 except KeyboardInterrupt: # Ctrl+C pressed, so…
     spi.close()
-
+    GPIO.cleanup()
 
 
 
 def ade_reset():
-    wiringpi.digitalWrite(ADE_RST, OFF)
+    GPIO.output(ADE_RST, GPIO.LOW)
     time.sleep(0.100)
-    wiringpi.digitalWrite(ADE_RST, ON)
+    GPIO.output(ADE_RST, GPIO.HIGH)
     time.sleep(0.100)
 
 
@@ -90,9 +91,73 @@ def ade_reset_peaks():
     print "Reset VPEAK"
 
 
+def ade_config():
+    ui, uc = 0, 0
+
+    # reset
+    ade_reset()
+
+    # perform software reset
+    ui = ade_read(MR_MODE, ui, MR_MODE_CNT)
+    ui |= MODE_SWRST
+    ADE_write(MR_MODE, ui, MR_MODE_CNT)
+    time.sleep(0.20); # Wait for reset to take effect
+
+    # Get die version
+    uc = ade_read (MR_DIEREV, MR_DIEREV_CNT)
+
+    # Write to Mode register
+    ui = 0x00 | \
+        MODE_DISLPF2   |    \
+        MODE_DISCF     |    \
+        MODE_DISSAG    |    \
+        MODE_WAV_POWER |    \
+        0x00
+        # MODE_DISLPF2   |    \ # Disable LPF after the multiplier (LPF2)
+        # MODE_DISCF     |    \ # Disable frequency output
+        # MODE_DISSAG    |    \ # Disable line voltage sag detection
+        # MODE_WAV_POWER |    \ # Sample active power
+        # MODE_DISHPF    |   // Disable HPF in Channel 1
+        # MODE_ASUSPEND  |   // Disable A/D converters
+        # MODE_TEMPSEL   |   // Start temperature conversion
+        # MODE_SWRST     |   // Software Chip Reset.
+        # MODE_CYCMODE   |   // Enable line cycle accumulation mode
+        # MODE_DISCH1    |   // Short out Chan1 (Current)
+        # MODE_DISCH2    |   // Short out Chan2 (Voltage)
+        # MODE_SWAP      |   // Swap Chan1 and Chan2
+        # MODE_DTRT_3K5  |   // Waverform data rate to 3.5ksps
+        # MODE_POAM      |   // Accumulated positive power only
+
+
+    # Set the mode
+    ade_write(MR_MODE, ui, MR_MODE_CNT)
+
+    # Write to interrupt enable register
+    ui = IRQ_NONE;
+    ade_write(MR_IRQEN, ui, MR_IRQEN_CNT)
+
+    # Reset interrupt status (with reset)
+    ui = ade_read(MR_RSTIRQ, MR_RSTIRQ_CNT)
+
+    # Set up the gain register
+    uc = 0x00  # ADC1,2 gain = 1 full scale range is +-0.5V
+    ade_write(MR_GAIN, uc, MR_GAIN_CNT)
+
+    # Set up the offset correction for ADC1
+    uc = 0x00
+    ade_write(MR_CH1OS, uc, MR_CH1OS_CNT)
+
+    # Set up the offset correction for ADC2
+    uc = 0x00
+    ade_write (MR_CH2OS, uc, MR_CH2OS_CNT)
+
+    return
+
+
+
 def ade_read(addr, count):
-    # select the chip
-    wiringpi.digitalWrite(ADE_CS, LOW)
+    # TODO select the chip
+    GPIO.output(ADE_CS, GPIO.LOW)
     time.sleep(0.01)
 
     # write address to access
@@ -102,12 +167,51 @@ def ade_read(addr, count):
     # read
     r = spi.readbytes(count)
 
-    # TODO might need to flip around bits here,
-    # need to
+    # TODO might need to flip around bits here
 
-    # deselect the chip
+    # TODO deselect the chip
     wiringpi.digitalWrite(ADE_CS, HIGH)
     time.sleep(0.100)
 
     return r
+
+
+def ade_write(addr, data, count):
+    # TODO select the chip
+    GPIO.output(ADE_CS, GPIO.LOW)
+    time.sleep(0.01)
+
+    # write address to access
+    spi.xfer2(addr | ADE_WRITE_FLAG)
+    time.sleep(0.004)
+
+    # read
+    r = spi.writebytes(data)
+
+    # TODO might need to flip around bits here
+
+    # TODO deselect the chip
+    wiringpi.digitalWrite(ADE_CS, HIGH)
+    time.sleep(0.100)
+
+    return r
+
+
+def ade_isr(channel):
+    irqstat, irqen = 0, 0
+
+    # Read IRQ Status and reset
+    irqstat = ade_read(MR_RSTIRQ, MR_RSTIRQ_CNT)
+
+    #  Sample available
+    if irqstat & IRQ_WSMP:
+        # Read waveform register to get sample
+        sample_ = ade_read(MR_WAVEFORM, MR_WAVEFORM_CNT)
+
+        # Clear bit in interrupt enable register to stop sampling
+        irqen = ade_read(MR_IRQEN, MR_IRQEN_CNT)
+        irqen = irqen & ~IRQ_WSMP
+        ade_write (MR_IRQEN, irqen, MR_IRQEN_CNT)
+
+
 
